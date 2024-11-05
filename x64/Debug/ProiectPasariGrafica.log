@@ -1,0 +1,18 @@
+﻿  C:freeglut.dll
+  C:glew32.dll
+  C:glew32s.dll
+  3 File(s) copied
+  C:glfw3.dll
+  C:glfw3dll.dll
+  C:glfw3_mt.dll
+  3 File(s) copied
+  C:SOIL.dll
+  1 File(s) copied
+  main.cpp
+C:\Users\tiril\source\repos\ProiectPasariGrafica\ProiectPasariGrafica\main.cpp(196,34): warning C4244: 'argument': conversion from 'GLfloat' to 'int', possible loss of data
+C:\Users\tiril\source\repos\ProiectPasariGrafica\ProiectPasariGrafica\main.cpp(196,24): warning C4244: 'argument': conversion from 'GLfloat' to 'int', possible loss of data
+SOIL.lib(image_DXT.obj) : warning LNK4099: PDB '' was not found with 'SOIL.lib(image_DXT.obj)' or at ''; linking object as if no debug info
+  ProiectPasariGrafica.vcxproj -> C:\Users\tiril\source\repos\ProiectPasariGrafica\x64\Debug\ProiectPasariGrafica.exe
+  0 File(s) copied
+  0 File(s) copied
+  0 File(s) copied
