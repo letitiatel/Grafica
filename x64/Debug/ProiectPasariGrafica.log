@@ -10,8 +10,8 @@
   1 File(s) copied
   main.cpp
 C:\Users\letit\Grafica\Grafica\main.cpp(23,14): warning C4305: 'initializing': truncation from 'double' to 'GLfloat'
-C:\Users\letit\Grafica\Grafica\main.cpp(338,34): warning C4244: 'argument': conversion from 'GLfloat' to 'int', possible loss of data
-C:\Users\letit\Grafica\Grafica\main.cpp(338,24): warning C4244: 'argument': conversion from 'GLfloat' to 'int', possible loss of data
+C:\Users\letit\Grafica\Grafica\main.cpp(342,34): warning C4244: 'argument': conversion from 'GLfloat' to 'int', possible loss of data
+C:\Users\letit\Grafica\Grafica\main.cpp(342,24): warning C4244: 'argument': conversion from 'GLfloat' to 'int', possible loss of data
   ProiectPasariGrafica.vcxproj -> C:\Users\letit\Grafica\Grafica\x64\Debug\ProiectPasariGrafica.exe
   0 File(s) copied
   0 File(s) copied
