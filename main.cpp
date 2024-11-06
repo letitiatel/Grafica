@@ -10,29 +10,54 @@
 #include "glm/gtc/type_ptr.hpp"
 #include "SOIL.h"          
 #include <vector>
-#include <ctime>             
+#include <ctime>     
+#include <cmath>
 
 GLuint VaoId, VboId, EboId, ProgramId, myMatrixLocation;
-GLuint textures[3];       
+GLuint textures[3];     
+GLuint treeTextures[6];
+GLuint cloudTextures[3]; 
 GLfloat winWidth = 800, winHeight = 600;
 glm::mat4 myMatrix, resizeMatrix;
 float xMin = -80, xMax = 80.f, yMin = -60.f, yMax = 60.f;
+GLfloat M_PI = 3.141592653;
 
+// pasari
 struct Bird {
     glm::vec3 position;
-    glm::vec3 color;
     glm::vec3 direction;
     int frameOffset;      
 };
-
 std::vector<Bird> flock;
+
+// copaci
+struct Tree {
+    glm::vec3 position;
+    int textureIndex;
+};
+std::vector<Tree> trees;
+
+// nori
+struct Cloud {
+    glm::vec3 position;
+    int textureIndex;
+};
+std::vector<Cloud> clouds;
+
+// parametrii cercului format de pasari
+const glm::vec3 circleCenter(0.0f, 0.0f, 0.0f); 
+const float circleRadius = 30.0f;
+const float separationDistance = 10.0f; // distanta dintre pasari
+
+bool formingCircle = false;
+float timeToStartCircle = 500.0f;
+
 
 GLuint LoadTexture(const char* texturePath) {
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
 
-    // texture options
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -41,15 +66,10 @@ GLuint LoadTexture(const char* texturePath) {
     int width, height;
     unsigned char* image = SOIL_load_image(texturePath, &width, &height, 0, SOIL_LOAD_RGBA); 
 
-    if (image) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image); 
-        glGenerateMipmap(GL_TEXTURE_2D);
-        SOIL_free_image_data(image);
-    }
-    else {
-        printf("Failed to load texture: %s\n", texturePath);
-    }
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image); 
+    glGenerateMipmap(GL_TEXTURE_2D);
 
+    SOIL_free_image_data(image);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     return textureID;
@@ -58,26 +78,50 @@ GLuint LoadTexture(const char* texturePath) {
 void CreateFlock(int numBirds) {
     srand(static_cast<unsigned>(time(0))); // random start
 
-    float startX = -80.0f;
-    float xSpacing = 5.0f;
+    float startx = -80.0f;
+    float space = 5.0f;
 
     for (int i = 0; i < numBirds; ++i) {
         Bird bird;
 
-        // random y
+        // random y si x
         float randomY = -20.0f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / 40.0f));
-        float randomXOffset = static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / 2.0f)) - 1.0f;
+        float randomoffsetX = static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / 2.0f)) - 1.0f;
 
-        bird.position = glm::vec3(startX + i * xSpacing + randomXOffset, randomY, 0.0f);
-        bird.color = glm::vec3(1.0f, 1.0f, 1.0f);
+        bird.position = glm::vec3(startx + i * space + randomoffsetX, randomY, 0.0f);
         bird.direction = glm::vec3(0.01f, 0.0f, 0.0f);
-
-        // random texture at start
+        // fiecare pasare incepe cu o textura random la inceput ca sa dea impresia de diferenta in zbor
         bird.frameOffset = rand() % 3;
 
         flock.push_back(bird);
     }
 }
+
+void CreateTrees() {
+    float startx = -70.0f;
+    float space = 10.0f; // distanta dintre copaci
+
+    for (int i = 0; i < 6; ++i) {
+        Tree tree;
+        tree.position = glm::vec3(startx + i * space, yMin + 10.0f, 0.0f);
+        tree.textureIndex = i; 
+        trees.push_back(tree);
+    }
+}
+
+
+void CreateClouds() {
+    float startX = -50.0f;
+    float space = 50.0f; // distanta dintre nori
+
+    for (int i = 0; i < 3; ++i) {
+        Cloud cloud;
+        cloud.position = glm::vec3(startX + i * space, 40.0f, 0.0f);  // pozitie deasupra copacilor
+        cloud.textureIndex = 0;
+        clouds.push_back(cloud);
+    }
+}
+
 
 void CreateShaders(void) {
     ProgramId = LoadShaders("shader.vert", "shader.frag");
@@ -85,12 +129,14 @@ void CreateShaders(void) {
 }
 
 void CreateVBO(void) {
+
+    // vertices pasari
     static const GLfloat Vertices[] = {
         // pos                // texture coord
-        -3.5f, -3.5f, 0.0f,   0.0f, 0.0f,  // bot-left
-         3.5f, -3.5f, 0.0f,   1.0f, 0.0f,  // bot-right
-         3.5f,  3.5f, 0.0f,   1.0f, 1.0f,  // top-right
-        -3.5f,  3.5f, 0.0f,   0.0f, 1.0f   // top-left
+        -3.5f, -3.5f, 0.0f,   0.0f, 0.0f,  // stanga jos
+         3.5f, -3.5f, 0.0f,   1.0f, 0.0f,  // dreapta jos
+         3.5f,  3.5f, 0.0f,   1.0f, 1.0f,  // dreapta sus
+        -3.5f,  3.5f, 0.0f,   0.0f, 1.0f   // stanga sus
     };
 
     static const GLuint Indices[] = {
@@ -139,50 +185,145 @@ void Cleanup(void) {
 }
 
 void Initialize(void) {
-    glClearColor(0.91f, 0.95f, 0.96f, 1.0f);  // background
-    glEnable(GL_BLEND);                        // enable blending
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // blend function for transparency
+    glClearColor(0.91f, 0.95f, 0.96f, 1.0f);  // culoare background
+    glEnable(GL_BLEND);                        
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // pentru transparenta
 
-    CreateFlock(20);  // create flock
+    // creare pasari, copaci, nori
+    CreateFlock(20); 
+    CreateTrees();
+    CreateClouds(); 
     CreateVBO();
 
-    // load texture
+    // texturi pasari, copaci, nori
     textures[0] = LoadTexture("bird_1.png");
     textures[1] = LoadTexture("bird_2.png");
     textures[2] = LoadTexture("bird_3.png");
+
+    treeTextures[0] = LoadTexture("tree_1.png");
+    treeTextures[1] = LoadTexture("tree_2.png");
+    treeTextures[2] = LoadTexture("tree_3.png");
+    treeTextures[3] = LoadTexture("tree_4.png");
+    treeTextures[4] = LoadTexture("trees_5.png");
+    treeTextures[5] = LoadTexture("rock_1.png");
+
+    cloudTextures[0] = LoadTexture("cloud.png");
 
     CreateShaders();
     myMatrixLocation = glGetUniformLocation(ProgramId, "myMatrix");
     resizeMatrix = glm::ortho(xMin, xMax, yMin, yMax);
 }
 
-void UpdateFlock() {
-    for (auto& bird : flock) {
-        bird.position += bird.direction;
+void UpdateFlock(float deltaTime) {
+    if (formingCircle) {
+        float space = 2.0f * M_PI / flock.size(); // ca sa spatiem pasarile in mod egal
 
-        // repeat from left
-        if (bird.position.x > xMax) {
-            bird.position.x = xMin;
+        for (size_t i = 0; i < flock.size(); ++i) {
+            float targetAngle = space * i + glutGet(GLUT_ELAPSED_TIME) * 0.001f;
+            glm::vec3 targetPosition = circleCenter + glm::vec3(cos(targetAngle) * circleRadius, sin(targetAngle) * circleRadius, 0.0f);
+
+            glm::vec3 direction = glm::normalize(targetPosition - flock[i].position);
+            flock[i].position += direction * 0.1f * deltaTime;
+
+            // daca pasarea ajunge la o distanta prea mica, ii modificam pozitia
+            for (size_t j = 0; j < flock.size(); ++j) {
+                if (i != j) {
+                    float distance = glm::distance(flock[i].position, flock[j].position);
+                    if (distance < separationDistance) {
+                        glm::vec3 separationDirection = glm::normalize(flock[i].position - flock[j].position);
+                        flock[i].position += separationDirection * (separationDistance - distance);
+                    }
+                }
+            }
+        }
+    }
+    else {
+        for (auto& bird : flock) {
+            bird.position += bird.direction;
+
+            if (bird.position.x > xMax) {
+                bird.position.x = xMin;
+            }
         }
     }
 }
 
+
+
+void RenderTrees() {
+    float space = 45.0f;
+    float startx = -space * (6 - 1) / 2.0f;
+
+    for (int i = 0; i < 6; ++i) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, treeTextures[i]);
+        glUniform1i(glGetUniformLocation(ProgramId, "myTexture"), 0);
+
+        glm::vec3 treePosition(startx + i * space, 5.0f, 0.0f);
+
+        // translatare apoi scalare
+        glm::mat4 translationMatrix = glm::translate(resizeMatrix, treePosition);
+        glm::mat4 scaleMatrix = glm::scale(glm::vec3(5.0f, -5.0f, 1.0f));  // marime
+        myMatrix = translationMatrix * scaleMatrix; 
+
+        glUniformMatrix4fv(myMatrixLocation, 1, GL_FALSE, &myMatrix[0][0]);
+
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    }
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void RenderClouds() {
+    for (const auto& cloud : clouds) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, cloudTextures[cloud.textureIndex]);
+        glUniform1i(glGetUniformLocation(ProgramId, "myTexture"), 0);
+
+        glm::vec3 cloudPosition = cloud.position;
+
+        // translatarea apoi scalarea
+        glm::mat4 translationMatrix = glm::translate(resizeMatrix, cloudPosition);
+        glm::mat4 scaleMatrix = glm::scale(glm::vec3(5.0f, 5.0f, 1.0f));
+        myMatrix = translationMatrix * scaleMatrix;
+
+        glUniformMatrix4fv(myMatrixLocation, 1, GL_FALSE, &myMatrix[0][0]);
+
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    }
+}
+
 void RenderFunction(void) {
+    static float startTime = 0.0f;
+    startTime += 0.016f; // aprox. 60 frame-uri pe secunda
+
+    if (startTime > timeToStartCircle && !formingCircle) {
+        formingCircle = true;
+    }
+
+    glClearColor(0.529f, 0.808f, 0.922f, 1.0f);  // fundalul albastru
     glClear(GL_COLOR_BUFFER_BIT);
-    UpdateFlock();
+
+
+    UpdateFlock(0.016f);
+    RenderClouds();
+    RenderTrees();
+
+    // incepem schimbarea texturilor pasarilor (pentru efectul de zbor)
 
     static int frameCounter = 0;
 
     for (const auto& bird : flock) {
-        int textureIndex = (frameCounter / 800 + bird.frameOffset) % 3; // bird start with frameOffset for difference
+        int textureIndex = (frameCounter / 800 + bird.frameOffset) % 3; // folosim frameCounter si frameOffset ca sa alegem texturi diferite ale pasarilor
+
+        // bind la textura apoi desenam pasarea
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, textures[textureIndex]);  // bind texture loaded
+        glBindTexture(GL_TEXTURE_2D, textures[textureIndex]);
         glUniform1i(glGetUniformLocation(ProgramId, "myTexture"), 0);
 
         myMatrix = glm::translate(resizeMatrix, bird.position);
         glUniformMatrix4fv(myMatrixLocation, 1, GL_FALSE, &myMatrix[0][0]);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);  // draw bird quad
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); 
     }
 
     glBindTexture(GL_TEXTURE_2D, 0);  
@@ -196,7 +337,7 @@ int main(int argc, char* argv[]) {
     glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
     glutInitWindowSize(winWidth, winHeight);
     glutInitWindowPosition(100, 100);
-    glutCreateWindow("Single Flock of Birds - OpenGL");
+    glutCreateWindow("FLock Of Birds");
 
     glewInit();
 
