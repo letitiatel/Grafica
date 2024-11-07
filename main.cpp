@@ -17,6 +17,7 @@ GLuint VaoId, VboId, EboId, ProgramId, myMatrixLocation;
 GLuint textures[3];     
 GLuint treeTextures[6];
 GLuint cloudTextures[3]; 
+bool increasedCloudRotation = false;
 GLfloat winWidth = 800, winHeight = 600;
 glm::mat4 myMatrix, resizeMatrix;
 float xMin = -80, xMax = 80.f, yMin = -60.f, yMax = 60.f;
@@ -50,7 +51,7 @@ const float circleRadius = 30.0f;
 const float separationDistance = 10.0f; // distanta dintre pasari
 
 bool formingCircle = false;
-float timeToStartCircle = 500.0f;
+float timeToStartCircle = 400.0f;
 
 
 GLuint LoadTexture(const char* texturePath) {
@@ -216,7 +217,7 @@ void Initialize(void) {
 
 void UpdateFlock(float deltaTime) {
     if (formingCircle) {
-        float space = 2.0f * M_PI / flock.size(); // ca sa spatiem pasarile in mod egal
+        float space = 2.0f * M_PI / flock.size();
 
         for (size_t i = 0; i < flock.size(); ++i) {
             float targetAngle = space * i + glutGet(GLUT_ELAPSED_TIME) * 0.001f;
@@ -281,10 +282,28 @@ void RenderClouds() {
 
         glm::vec3 cloudPosition = cloud.position;
 
+        static float rotationAngle = 0.0f;
+
+        float maxRotation = 5.0f; 
+        float minRotation = -5.0f; 
+
+        if (rotationAngle >= maxRotation || rotationAngle <= minRotation) {
+            increasedCloudRotation = !increasedCloudRotation; 
+        }
+
+        if (increasedCloudRotation == false) {
+            rotationAngle += 0.001f; 
+        }
+        else {
+            rotationAngle -= 0.001f;
+        }
+
         // translatarea apoi scalarea
         glm::mat4 translationMatrix = glm::translate(resizeMatrix, cloudPosition);
         glm::mat4 scaleMatrix = glm::scale(glm::vec3(5.0f, 5.0f, 1.0f));
-        myMatrix = translationMatrix * scaleMatrix;
+        glm::mat4 rotateMatrix = glm::rotate(glm::radians(rotationAngle), glm::vec3(0.0f, 0.0f, 1.0f));
+
+        myMatrix = translationMatrix * rotateMatrix * scaleMatrix;
 
         glUniformMatrix4fv(myMatrixLocation, 1, GL_FALSE, &myMatrix[0][0]);
 
@@ -294,7 +313,7 @@ void RenderClouds() {
 
 void RenderFunction(void) {
     static float startTime = 0.0f;
-    startTime += 0.016f; // aprox. 60 frame-uri pe secunda
+    startTime += 0.016f; 
 
     if (startTime > timeToStartCircle && !formingCircle) {
         formingCircle = true;
@@ -308,20 +327,24 @@ void RenderFunction(void) {
     RenderClouds();
     RenderTrees();
 
-    // incepem schimbarea texturilor pasarilor (pentru efectul de zbor)
-
     static int frameCounter = 0;
 
     for (const auto& bird : flock) {
-        int textureIndex = (frameCounter / 800 + bird.frameOffset) % 3; // folosim frameCounter si frameOffset ca sa alegem texturi diferite ale pasarilor
-
-        // bind la textura apoi desenam pasarea
+        int textureIndex = (frameCounter / 350 + bird.frameOffset) % 3; 
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, textures[textureIndex]);
         glUniform1i(glGetUniformLocation(ProgramId, "myTexture"), 0);
 
-        myMatrix = glm::translate(resizeMatrix, bird.position);
+        
+
+        glm::mat4 translationMatrix = glm::translate(resizeMatrix, bird.position);
+        glm::mat4 scaleMatrix = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f));
+        
+
+        myMatrix = translationMatrix * scaleMatrix;
+
+
         glUniformMatrix4fv(myMatrixLocation, 1, GL_FALSE, &myMatrix[0][0]);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); 
     }
@@ -349,3 +372,4 @@ int main(int argc, char* argv[]) {
     glutMainLoop();
     return 0;
 }
+
