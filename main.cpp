@@ -14,10 +14,14 @@
 #include <cmath>
 
 GLuint VaoId, VboId, EboId, ProgramId, myMatrixLocation;
-GLuint textures[3];     
+GLuint textures[3];
 GLuint treeTextures[6];
+<<<<<<< HEAD
 GLuint cloudTextures[3]; 
 bool increasedCloudRotation = false;
+=======
+GLuint cloudTextures[3];
+>>>>>>> 1a544bb78e1428e72d488ad02f0b86c4b93ab2f4
 GLfloat winWidth = 800, winHeight = 600;
 glm::mat4 myMatrix, resizeMatrix;
 float xMin = -80, xMax = 80.f, yMin = -60.f, yMax = 60.f;
@@ -27,7 +31,7 @@ GLfloat M_PI = 3.141592653;
 struct Bird {
     glm::vec3 position;
     glm::vec3 direction;
-    int frameOffset;      
+    int frameOffset;
 };
 std::vector<Bird> flock;
 
@@ -46,7 +50,7 @@ struct Cloud {
 std::vector<Cloud> clouds;
 
 // parametrii cercului format de pasari
-const glm::vec3 circleCenter(0.0f, 0.0f, 0.0f); 
+const glm::vec3 circleCenter(0.0f, 0.0f, 0.0f);
 const float circleRadius = 30.0f;
 const float separationDistance = 10.0f; // distanta dintre pasari
 
@@ -65,9 +69,9 @@ GLuint LoadTexture(const char* texturePath) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int width, height;
-    unsigned char* image = SOIL_load_image(texturePath, &width, &height, 0, SOIL_LOAD_RGBA); 
+    unsigned char* image = SOIL_load_image(texturePath, &width, &height, 0, SOIL_LOAD_RGBA);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image); 
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
     glGenerateMipmap(GL_TEXTURE_2D);
 
     SOIL_free_image_data(image);
@@ -105,7 +109,7 @@ void CreateTrees() {
     for (int i = 0; i < 6; ++i) {
         Tree tree;
         tree.position = glm::vec3(startx + i * space, yMin + 10.0f, 0.0f);
-        tree.textureIndex = i; 
+        tree.textureIndex = i;
         trees.push_back(tree);
     }
 }
@@ -141,8 +145,8 @@ void CreateVBO(void) {
     };
 
     static const GLuint Indices[] = {
-        0, 1, 2,   
-        2, 3, 0    
+        0, 1, 2,
+        2, 3, 0
     };
 
     glGenVertexArrays(1, &VaoId);
@@ -187,13 +191,13 @@ void Cleanup(void) {
 
 void Initialize(void) {
     glClearColor(0.91f, 0.95f, 0.96f, 1.0f);  // culoare background
-    glEnable(GL_BLEND);                        
+    glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // pentru transparenta
 
     // creare pasari, copaci, nori
-    CreateFlock(20); 
+    CreateFlock(20);
     CreateTrees();
-    CreateClouds(); 
+    CreateClouds();
     CreateVBO();
 
     // texturi pasari, copaci, nori
@@ -265,7 +269,7 @@ void RenderTrees() {
         // translatare apoi scalare
         glm::mat4 translationMatrix = glm::translate(resizeMatrix, treePosition);
         glm::mat4 scaleMatrix = glm::scale(glm::vec3(5.0f, -5.0f, 1.0f));  // marime
-        myMatrix = translationMatrix * scaleMatrix; 
+        myMatrix = translationMatrix * scaleMatrix;
 
         glUniformMatrix4fv(myMatrixLocation, 1, GL_FALSE, &myMatrix[0][0]);
 
@@ -336,6 +340,7 @@ void RenderFunction(void) {
         glBindTexture(GL_TEXTURE_2D, textures[textureIndex]);
         glUniform1i(glGetUniformLocation(ProgramId, "myTexture"), 0);
 
+<<<<<<< HEAD
         
 
         glm::mat4 translationMatrix = glm::translate(resizeMatrix, bird.position);
@@ -345,11 +350,18 @@ void RenderFunction(void) {
         myMatrix = translationMatrix * scaleMatrix;
 
 
+=======
+
+        glm::mat4 translationMatrix = glm::translate(resizeMatrix, bird.position);
+        glm::mat4 scaleMatrix = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f)); 
+
+        myMatrix = translationMatrix * scaleMatrix;
+>>>>>>> 1a544bb78e1428e72d488ad02f0b86c4b93ab2f4
         glUniformMatrix4fv(myMatrixLocation, 1, GL_FALSE, &myMatrix[0][0]);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); 
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     }
 
-    glBindTexture(GL_TEXTURE_2D, 0);  
+    glBindTexture(GL_TEXTURE_2D, 0);
     glFlush();
 
     frameCounter++;
@@ -366,7 +378,7 @@ int main(int argc, char* argv[]) {
 
     Initialize();
     glutDisplayFunc(RenderFunction);
-    glutIdleFunc(RenderFunction); 
+    glutIdleFunc(RenderFunction);
     glutCloseFunc(Cleanup);
 
     glutMainLoop();
